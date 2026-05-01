@@ -13,8 +13,18 @@ __pycache__/
 venv/
 *-venv/
 
+# Build and distribution output
+build/
+dist/
+
+# Claude Code settings
+.claude/
+
 # Editor and OS files
 .idea/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Reference files (not part of the project)
+成品.txt
