@@ -1,0 +1,1099 @@
+package FinalCalculator;
+
+import java.awt.*;
+import javax.swing.*;
+import java.awt.event.*;
+import java.text.DecimalFormat;
+import java.util.Stack;
+
+public class FunctionalityCalculator implements ActionListener{
+	/*===================计算器基本设置（属性）======================*/
+	DecimalFormat Precision; 	//设置数据输出精度
+	String Input = "0";     //记录输入算式
+	String copy; 	//做复制用
+	String memory = "";     //计算器内存（字符串）
+	String pattern = "sci";      //记录计算器模式（默认为科学计算器）
+
+	JFrame operatecontainer;     //定义计算器窗体对象
+	JTextField InputText,ResultText;     //定义计算器输入/输出显示文本框
+	//定义计算器子窗体（CalWindow对应整个计算器操作界面，WorkWindow包含按键区（功能按键和常规按键））
+	JPanel WorkWindow,AggregateButtonWindow,ButtonWindow;
+
+	JMenuBar MainMenu;      //定义计算器下拉菜单栏及菜单栏选项
+	JMenu EditMenu,HelpMenu,HandoverMenu,programmerItem;
+	JMenuItem exitItem,copyItem, pasteItem,scienceItem,topHelp;
+	JMenuItem hexItem,octItem,binItem;
+	JTextArea help; 	//帮助菜单栏选项（可滚动）
+	JScrollPane scrollHelp;
+	
+	JButton aggregatebutton[] = new JButton[4];     //功能性按键
+	String AggregateButtonName[] = {"MC","MR","MS","M+"};    //定义功能性按键名称
+	
+	JButton scinormbutton[] = new JButton[35];     //科学计算器按键
+	
+	String SciButtonName[] = {"sin","cos","tan","log","Exp", 
+			"√","1/x","n!","±","M",
+			"^","CE","AC","←","÷",
+			"Dec","7","8","9","×",
+			"Bin","4","5","6","-",
+			"π","1","2","3","+",
+			"(",")","0", ".","=",};
+	
+	JButton pronormbutton[] = new JButton[36];     //程序员计算器按键
+	
+	String ProButtonName[] = {"2Dec","2Bin","AND","OR","XOR","NOT",
+			"2Oct","2Hex","CE","AC","←","÷",
+			"A","B","7","8","9","×",
+			"C","D","4","5","6","-",
+			"E","F","1","2","3","+",
+			"Lsh","Rsh","M","0",".","="};
+	/*=================================================================*/
+	
+	public FunctionalityCalculator() {    //构造函数
+		operatecontainer = new JFrame("计算器");     //计算器操作界面命名
+		Precision = new DecimalFormat("0.##############"); 	   //设置数据输出精度(对于double型值)
+
+		/*======================计算器操作界面的下拉菜单栏设置=========================*/
+		MainMenu = new JMenuBar();     //实例化菜单栏对象（主菜单栏）
+		EditMenu = new JMenu("选项(S)");		//实例化菜单栏对象（子菜单栏：选项）
+		HelpMenu = new JMenu("帮助(H)");		//实例化菜单栏对象（子菜单栏：帮助）
+
+		HandoverMenu = new JMenu("切换(H)");
+
+		//编辑菜单栏
+		copyItem = new JMenuItem("复制(C) Ctril+C");     //实例化子菜单栏选项（选项：复制）
+		copyItem.addActionListener(this);     //为该菜单栏选项添加监听器
+		
+		pasteItem = new JMenuItem("粘贴(V) Ctril+V");	//实例化子菜单栏选项（选项：粘贴）
+		pasteItem.addActionListener(this);    //为该菜单栏选项添加监听器
+		
+		exitItem = new JMenuItem("退出(E)");	//实例化子菜单栏选项（选项：退出）
+		exitItem.addActionListener(this);    //为该菜单栏选项添加监听器
+		
+		hexItem = new JMenuItem("十六进制");
+		hexItem.addActionListener(this);
+		
+		octItem = new JMenuItem("八进制");
+		octItem.addActionListener(this);
+		
+		binItem = new JMenuItem("二进制");
+		binItem.addActionListener(this);
+
+		scienceItem = new JMenuItem("科学");
+		scienceItem.addActionListener(this);
+		
+		programmerItem = new JMenu("程序员");
+		programmerItem.addActionListener(this);
+		programmerItem.add(hexItem);
+		programmerItem.add(octItem);
+		programmerItem.add(binItem);
+
+		HandoverMenu.add(scienceItem);
+		HandoverMenu.add(programmerItem);
+
+		EditMenu.add(copyItem);     //将复制、粘贴菜单栏选项添加到编辑菜单栏
+		EditMenu.add(pasteItem);
+		EditMenu.addSeparator();    //添加分割线
+		EditMenu.add(HandoverMenu);
+		EditMenu.addSeparator();    //添加分割线
+		EditMenu.add(exitItem);
+
+		//帮助菜单栏
+		topHelp = new JMenuItem("关于...");     //实例化子菜单栏选项（帮助：）
+		topHelp.addActionListener(this);    //为该子菜单栏选项添加监听器
+
+		help = new JTextArea(6,25);    //实例化文本框对象用于显示帮助内容
+		scrollHelp = new JScrollPane(help);     //实例化垂直/水平滚动窗口
+		help.setEditable(false);    //不允许用户修改帮助窗口的内容
+
+		help.append("执行简单计算\n");    //帮助窗口的显示内容
+		help.append("1. 键入计算的第一个数字。\n");
+		help.append("2. 单击“+”执行加、“-”执行减、“*”执行乘或“/”执行除。\n");
+		help.append("3. 键入计算的下一个数字。\n");
+		help.append("4. 输入所有剩余的运算符和数字。\n");
+		help.append("5. 单击“=”。\n");
+
+		HelpMenu.add(topHelp);    //在帮助菜单栏中添加菜单栏选项（关于）
+
+		MainMenu.add(EditMenu);    //在计算器操作界面的菜单栏中添加三个子菜单栏（选项/帮助）
+		MainMenu.add(HelpMenu);
+		/*==========================================================================*/
+		
+		BuildScienceCalculator();
+	}
+
+	public void BuildScienceCalculator() {		
+		/*============================计算器文本框设置===============================*/		
+		InputText = new JTextField(10);      //设置计算器输入/输出文本框的长度
+		InputText.setText("");     //计算器初始显示为空白
+		InputText.setEditable(false);      //不允许在直接修改文本框中的内容
+		InputText.setBackground(Color.LIGHT_GRAY);
+		InputText.setHorizontalAlignment(JTextField.RIGHT);    //默认输入/输出位置位于文本框最右侧
+		InputText.setBorder(null);     //去掉文本框边框
+		InputText.setFont(new Font("Courier",Font.BOLD,35));
+		InputText.setBounds(5,10,425,10);
+		
+		
+		ResultText = new JTextField(10);      //设置计算器输入/输出文本框的长度
+		ResultText.setText("0");     //计算器初始显示为空白
+		ResultText.setEditable(false);      //不允许在直接修改文本框中的内容
+		ResultText.setBackground(Color.LIGHT_GRAY);
+		ResultText.setHorizontalAlignment(JTextField.RIGHT);    //默认输入/输出位置位于文本框最右侧
+		ResultText.setBorder(null);     //去掉文本框边框
+		ResultText.setFont(new Font("Courier",Font.BOLD,40));
+		ResultText.setBounds(5,30,425,10);
+		/*==========================================================================*/
+		
+	    /*============================设置功能性按键控件=============================*/
+		AggregateButtonWindow = new JPanel();     //实例化子窗体	
+		AggregateButtonWindow.setLayout(new GridLayout(1,4,3,6));    //设置布局为栅格布局
+		
+		for (int i=0; i<aggregatebutton.length; i++) {     //利用for循环实例化按键对象
+			aggregatebutton[i] = new JButton(AggregateButtonName[i]);
+			aggregatebutton[i].setFont(new Font("Courier",Font.BOLD,20));
+			aggregatebutton[i].setBackground(Color.gray);     //设置按键背景颜色为亮灰
+			AggregateButtonWindow.add(aggregatebutton[i]);     //将实例化按键添加到计算器常规按键区（ButtonWindow）
+			aggregatebutton[i].addActionListener(this);     //为按键对象添加监听
+		}
+	    
+	    /*==========================================================================*/
+	    
+	    /*============================设置常规按键控件==============================*/
+		ButtonWindow = new JPanel();     //实例化子窗体对象
+		ButtonWindow.setLayout(new GridLayout(7,5,5,3));    //设置计算器常规按键区为网格布局
+		
+		for (int j=0; j<scinormbutton.length; j++) {     //利用for循环实例化按键对象
+			scinormbutton[j] = new JButton(SciButtonName[j]);
+			scinormbutton[j].setBackground(Color.gray);    //设置运算符按键背景为亮灰
+			scinormbutton[j].setFont(new Font("Courier",Font.BOLD,20));
+			if(SciButtonName[j].equals("0")||SciButtonName[j].equals("1")||SciButtonName[j].equals("2")||SciButtonName[j].equals("3")||
+			   SciButtonName[j].equals("4")||SciButtonName[j].equals("5")||SciButtonName[j].equals("6")||SciButtonName[j].equals("7")||
+			   SciButtonName[j].equals("8")||SciButtonName[j].equals("9")){    //设数字按键的背景为白色
+				scinormbutton[j].setBackground(Color.white);
+			}
+			ButtonWindow.add(scinormbutton[j]);     //将实例化按键添加到计算器常规按键区（ButtonWindow）
+			scinormbutton[j].addActionListener(this);     //为按键对象添加监听
+		}	
+		/*==========================================================================*/
+		
+	    /*=========================计算器按键（工作）区布局===========================*/
+		WorkWindow = new JPanel();     //实例化子窗体	
+		WorkWindow.setLayout(new BorderLayout(5,10));    //设置布局为边框布局，边框布局分东南西北中5个方位来添加控件（横向/纵向间隔3个像素）
+		
+		WorkWindow.add(AggregateButtonWindow,BorderLayout.NORTH);    //将聚合功能按键控件放置在计算器工作窗口的上侧（北方）
+		WorkWindow.add(ButtonWindow, BorderLayout.CENTER);    //将常规按键控件添加到计算器工作窗口的中央
+		/*==========================================================================*/
+		
+		/*==========================计算器操作界面总布局=============================*/
+		operatecontainer.getContentPane().setLayout(null);
+		
+		MainMenu.setBounds(0,0,650,20);    //菜单栏起始点在原点，宽为650，高为20
+		operatecontainer.getContentPane().add(MainMenu);
+		
+		InputText.setBounds(5,30,425,60);
+		operatecontainer.getContentPane().add(InputText);
+		
+		ResultText.setBounds(5,90,425,60);
+		operatecontainer.getContentPane().add(ResultText);
+		
+		WorkWindow.setBounds(5,160,425,480);
+		operatecontainer.getContentPane().add(WorkWindow);
+		/*==========================================================================*/
+		
+		//计算器界面常规操作设置
+		operatecontainer.pack();
+		operatecontainer.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		operatecontainer.setSize(440,680);    //计算器操作界面的大小
+		operatecontainer.setResizable(false);     //不允许用户修改计算器操作界面的大小
+		operatecontainer.setVisible(true);     //设置使计算器操作界面可见
+		operatecontainer.setLocation(500,300);     //设置计算器操作界面在电脑显示的初始位置（可拖动）
+	}
+
+	public void BuildProgrammerCalculator() {		
+		/*============================计算器文本框设置===============================*/		
+		InputText = new JTextField(10);      //设置计算器输入/输出文本框的长度
+		InputText.setText("");     //计算器初始显示为空白
+		InputText.setEditable(false);      //不允许在直接修改文本框中的内容
+		InputText.setBackground(Color.LIGHT_GRAY);
+		InputText.setHorizontalAlignment(JTextField.RIGHT);    //默认输入/输出位置位于文本框最右侧
+		InputText.setBorder(null);     //去掉文本框边框
+		InputText.setFont(new Font("Courier",Font.BOLD,35));
+		InputText.setBounds(5,10,425,10);
+		
+		
+		ResultText = new JTextField(10);      //设置计算器输入/输出文本框的长度
+		ResultText.setText("0");     //计算器初始显示为空白
+		ResultText.setEditable(false);      //不允许在直接修改文本框中的内容
+		ResultText.setBackground(Color.LIGHT_GRAY);
+		ResultText.setHorizontalAlignment(JTextField.RIGHT);    //默认输入/输出位置位于文本框最右侧
+		ResultText.setBorder(null);     //去掉文本框边框
+		ResultText.setFont(new Font("Courier",Font.BOLD,40));
+		ResultText.setBounds(5,30,425,10);
+		/*==========================================================================*/
+		
+		/*============================设置功能性按键控件=============================*/
+		AggregateButtonWindow = new JPanel();     //实例化子窗体	
+		AggregateButtonWindow.setLayout(new GridLayout(1,4,3,6));    //设置布局为栅格布局
+		
+		for (int i=0; i<aggregatebutton.length; i++) {     //利用for循环实例化按键对象
+			aggregatebutton[i] = new JButton(AggregateButtonName[i]);
+			aggregatebutton[i].setFont(new Font("Courier",Font.BOLD,20));
+			aggregatebutton[i].setBackground(Color.gray);     //设置按键背景颜色为亮灰
+			AggregateButtonWindow.add(aggregatebutton[i]);     //将实例化按键添加到计算器常规按键区（ButtonWindow）
+			aggregatebutton[i].addActionListener(this);     //为按键对象添加监听
+		}
+	    
+	    /*==========================================================================*/
+	    
+	    /*============================设置常规按键控件==============================*/
+		ButtonWindow = new JPanel();     //实例化子窗体对象
+		ButtonWindow.setLayout(new GridLayout(6,6,5,3));    //设置计算器常规按键区为网格布局
+		
+		for (int j=0; j<pronormbutton.length; j++) {     //利用for循环实例化按键对象
+			pronormbutton[j] = new JButton(ProButtonName[j]);
+			pronormbutton[j].setBackground(Color.gray);    //设置运算符按键背景为亮灰
+			pronormbutton[j].setFont(new Font("Courier",Font.BOLD,20));
+			if(ProButtonName[j].equals("0")||ProButtonName[j].equals("1")||ProButtonName[j].equals("2")||ProButtonName[j].equals("3")||
+			   ProButtonName[j].equals("4")||ProButtonName[j].equals("5")||ProButtonName[j].equals("6")||ProButtonName[j].equals("7")||
+			   ProButtonName[j].equals("8")||ProButtonName[j].equals("9")||ProButtonName[j].equals("A")||ProButtonName[j].equals("B")||
+			   ProButtonName[j].equals("C")||ProButtonName[j].equals("D")||ProButtonName[j].equals("E")||ProButtonName[j].equals("F")){    //设数字按键的背景为白色
+				pronormbutton[j].setBackground(Color.white);
+			} else if(ProButtonName[j].equals(".")) {
+				pronormbutton[j].setEnabled(false);     //程序员模式暂不支持小数点运算
+			}
+			ButtonWindow.add(pronormbutton[j]);     //将实例化按键添加到计算器常规按键区（ButtonWindow）
+			pronormbutton[j].addActionListener(this);     //为按键对象添加监听
+		}
+		/*==========================================================================*/
+		
+	    /*=========================计算器按键（工作）区布局===========================*/
+		WorkWindow = new JPanel();     //实例化子窗体	
+		WorkWindow.setLayout(new BorderLayout(5,10));    //设置布局为边框布局，边框布局分东南西北中5个方位来添加控件（横向/纵向间隔3个像素）
+		
+		WorkWindow.add(AggregateButtonWindow,BorderLayout.NORTH);    //将聚合功能按键控件放置在计算器工作窗口的上侧（北方）
+		WorkWindow.add(ButtonWindow, BorderLayout.CENTER);    //将常规按键控件添加到计算器工作窗口的中央
+		/*==========================================================================*/
+		
+		/*==========================计算器操作界面总布局=============================*/
+		operatecontainer.getContentPane().setLayout(null);
+		
+		MainMenu.setBounds(0,0,650,20);    //菜单栏起始点在原点，宽为650，高为20
+		operatecontainer.getContentPane().add(MainMenu);
+		
+		InputText.setBounds(8,30,520,60);
+		operatecontainer.getContentPane().add(InputText);
+		
+		ResultText.setBounds(8,90,520,60);
+		operatecontainer.getContentPane().add(ResultText);
+		
+		WorkWindow.setBounds(8,160,520,480);
+		operatecontainer.getContentPane().add(WorkWindow);
+		/*==========================================================================*/
+		
+		//计算器界面常规操作设置
+		operatecontainer.pack();
+		operatecontainer.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		operatecontainer.setSize(540,680);    //计算器操作界面的大小
+		operatecontainer.setResizable(false);     //不允许用户修改计算器操作界面的大小
+		operatecontainer.setVisible(true);     //设置使计算器操作界面可见
+	}
+	
+	public void actionPerformed(ActionEvent event) {     //对各种按键输入进行监听和响应
+		String GetButton = event.getActionCommand();
+		if("0123456789.+-×÷^√M()&|⊕<>ABCDEF".indexOf(GetButton) >= 0){     //输入了双操作数运算符或者数值（0~9）或者16进制操作数（A~F）
+			if("0123456789ABCDEF(".indexOf(GetButton) >= 0 && InputText.getText().equals("")) {     //若上次计算结束后，直接输入数字，则将上次计算结果清零，重新开始下一次运算
+				Input="";
+				ResultText.setText("0");
+			}
+			
+			Input = Input+GetButton;     //新输入的运算符或者数值赋给字符串变量
+
+			Input = Input.replace("++","+");    //误操作改正（按下多个双操作数运算符号）
+			Input = Input.replace("--","-");Input = Input.replace("××","×");Input = Input.replace("÷÷","÷");
+			Input = Input.replace("MM","M");Input = Input.replace("√√","√");Input = Input.replace("^^","^");
+			Input = Input.replace("0√","2√");     //根号运算默认为开平方根
+			Input = Input.replace("(√","(2√");Input = Input.replace("+√","+2√");Input = Input.replace("-√","-2√");
+			Input = Input.replace("×√","×2√");Input = Input.replace("÷√","÷2√");Input = Input.replace("M√","÷M2√");
+			Input = Input.replace("..",".");Input = Input.replace("(^","(2^");Input = Input.replace("+^","+2^");
+			Input = Input.replace("-^","-2^");Input = Input.replace("×^","×2^");Input = Input.replace("÷^","÷2^");
+			Input = Input.replace("M^","M2^");Input = Input.replace("<<","<");Input = Input.replace(">>",">");
+			Input = Input.replace("&&","&");Input = Input.replace("||","|");Input = Input.replace("⊕⊕","⊕");
+			
+			InputText.setText(Input);     //在算式（输入）文本框中进行显示
+		} else if("=".indexOf(GetButton) >= 0){     //按下等号键
+			if(pattern.equals("sci")) {
+				Input = Input.replace("(-","(0-");     //在括号中的负数前面仍需补0
+				if('-'==Input.charAt(0)) {     //在优先运算中，若符号在算式第一位，需补0
+					Input = "0"+Input;
+				}
+				double show = Cal(Change(Input));     //求解算式，返回结果
+				InputText.setText("");     //按下等号，算式区清空并在结果区显示运算结果
+				ResultText.setText(handleStringResunltNum(show));
+				String t2 = String.valueOf(Precision.format(show));    //将运算结果转化为字符串并限制显示精度
+				Input = t2;    //保存运算结果以便以结果为操作数的运算（如果有的话）
+			} else if(pattern.equals("bin")) {
+				if(Input.indexOf("+")>=0) {     //若进行的是加法运算
+					String[] temp=Input.split("\\+");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'+');      //在只存在两个操作数的情况下进行加法运算
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					Input = BinAddZero(Input,temp[0],temp[1]);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("×")>=0) {     //若进行的是乘法运算
+					String[] temp=Input.split("\\×");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'×');
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					Input = BinAddZero(Input,temp[0],temp[1]);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("-")>=0) {     //若进行的是减法运算
+					String[] temp=Input.split("\\-");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'-');
+					InputText.setText("");
+					if(result>=0) {
+						Input = Integer.toBinaryString(result);
+						Input = BinAddZero(Input,temp[0],temp[1]);
+						ResultText.setText(Input);
+					} else {
+						ResultText.setText("错误的运算结果");
+						Input = "0";
+					}
+				} else if(Input.indexOf("÷")>=0) {     //若进行的是乘法运算
+					String[] temp=Input.split("\\÷");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'÷');
+					InputText.setText("");
+					if(result>=1) {
+						Input = Integer.toBinaryString(result);
+						Input = BinAddZero(Input,temp[0],temp[1]);
+						ResultText.setText(Input);
+					} else {
+						ResultText.setText("错误的运算结果");
+						Input = "0";
+					}
+				} else if(Input.indexOf("M")>=0) {     //若进行的是求余运算
+					String[] temp=Input.split("M");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'M');
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					Input = BinAddZero(Input,temp[0],temp[1]);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("&")>=0) {     //若进行的是与运算
+					String[] temp=Input.split("\\&");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'&');
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					Input = BinAddZero(Input,temp[0],temp[1]);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("|")>=0) {     //若进行的是或运算
+					String[] temp=Input.split("\\|");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'|');
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					Input = BinAddZero(Input,temp[0],temp[1]);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("⊕")>=0) {     //若进行的是异或运算
+					String[] temp=Input.split("\\⊕");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'⊕');
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					Input = BinAddZero(Input,temp[0],temp[1]);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("<")>=0) {     //若进行的是左移位运算
+					String[] temp=Input.split("\\<");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'<');
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					ResultText.setText(Input);
+				}  else if(Input.indexOf(">")>=0) {     //若进行的是右移位运算
+					String[] temp=Input.split("\\>");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],2),Integer.parseInt(temp[1],2),'>');
+					InputText.setText("");
+					Input = Integer.toBinaryString(result);
+					Input = BinAddZero(Input,temp[0],temp[0]);
+					ResultText.setText(Input);
+				}
+			} else if(pattern.equals("oct")) {
+				if(Input.indexOf("+")>=0) {     //若进行的是加法运算
+					String[] temp=Input.split("\\+");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'+');      //在只存在两个操作数的情况下进行加法运算
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("×")>=0) {     //若进行的是乘法运算
+					String[] temp=Input.split("\\×");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'×');
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("-")>=0) {     //若进行的是减法运算
+					String[] temp=Input.split("\\-");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'-');
+					InputText.setText("");
+					if(result>=0) {
+						Input = Integer.toOctalString(result);
+						ResultText.setText(Input);
+					} else {
+						ResultText.setText("错误的运算结果");
+						Input = "0";
+					}
+				} else if(Input.indexOf("÷")>=0) {     //若进行的是减法运算
+					String[] temp=Input.split("\\÷");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'÷');
+					InputText.setText("");
+					if(result>=1) {
+						Input = Integer.toOctalString(result);
+						ResultText.setText(Input);
+					} else {
+						ResultText.setText("错误的运算结果");
+						Input = "0";
+					}
+				} else if(Input.indexOf("M")>=0) {     //若进行的是求余运算
+					String[] temp=Input.split("M");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'M');
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("&")>=0) {     //若进行的是与运算
+					String[] temp=Input.split("\\&");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'&');
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("|")>=0) {     //若进行的是或运算
+					String[] temp=Input.split("\\|");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'|');
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("⊕")>=0) {     //若进行的是异或运算
+					String[] temp=Input.split("\\⊕");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'⊕');
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				} else if(Input.indexOf("<")>=0) {     //若进行的是左移位运算
+					String[] temp=Input.split("\\<");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'<');
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				}  else if(Input.indexOf(">")>=0) {     //若进行的是右移位运算
+					String[] temp=Input.split("\\>");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],8),Integer.parseInt(temp[1],8),'>');
+					InputText.setText("");
+					Input = Integer.toOctalString(result);
+					ResultText.setText(Input);
+				}
+			} else if(pattern.equals("hex")) {
+				if(Input.indexOf("+")>=0) {     //若进行的是加法运算
+					String[] temp=Input.split("\\+");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'+');      //在只存在两个操作数的情况下进行加法运算
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				} else if(Input.indexOf("×")>=0) {     //若进行的是乘法运算
+					String[] temp=Input.split("\\×");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'×');
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				} else if(Input.indexOf("-")>=0) {     //若进行的是减法运算
+					String[] temp=Input.split("\\-");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'-');
+					InputText.setText("");
+					if(result>=0) {
+						Input = Integer.toHexString(result).toUpperCase();
+						ResultText.setText(Input);
+					} else {
+						ResultText.setText("错误的运算结果");
+						Input = "0";
+					}
+				} else if(Input.indexOf("÷")>=0) {     //若进行的是减法运算
+					String[] temp=Input.split("\\÷");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'÷');
+					InputText.setText("");
+					if(result>=1) {
+						Input = Integer.toHexString(result).toUpperCase();
+						ResultText.setText(Input);
+					} else {
+						ResultText.setText("错误的运算结果");
+						Input = "0";
+					}
+				} else if(Input.indexOf("M")>=0) {     //若进行的是求余运算
+					String[] temp=Input.split("M");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'M');
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				} else if(Input.indexOf("&")>=0) {     //若进行的是与运算
+					String[] temp=Input.split("\\&");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'&');
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				} else if(Input.indexOf("|")>=0) {     //若进行的是或运算
+					String[] temp=Input.split("\\|");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'|');
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				} else if(Input.indexOf("⊕")>=0) {     //若进行的是异或运算
+					String[] temp=Input.split("\\⊕");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'⊕');
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				} else if(Input.indexOf("<")>=0) {     //若进行的是左移位运算
+					String[] temp=Input.split("\\<");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'<');
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				}  else if(Input.indexOf(">")>=0) {     //若进行的是右移位运算
+					String[] temp=Input.split("\\>");
+					int result = BinSolveDouble(Integer.parseInt(temp[0],16),Integer.parseInt(temp[1],16),'>');
+					InputText.setText("");
+					Input = Integer.toHexString(result).toUpperCase();
+					ResultText.setText(Input);
+				}
+			}
+		} else if("π".indexOf(GetButton) >= 0){     //按下常数π按键
+			if(InputText.getText().equals("")) {
+				Input = "3.1415926575";
+			} else {
+				Input = InputText.getText()+"3.1415926575";
+			}
+			InputText.setText(Input);
+		} else if("1/x".indexOf(GetButton) >= 0){     //按下求倒数按键（单操作数运算）
+			Input = NumCheck(Input);
+			double compute = 1/Double.parseDouble(Input);
+			InputText.setText("");
+			ResultText.setText(String.valueOf(handleStringResunltNum(compute)));
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("sin".indexOf(GetButton) >= 0){     //按下求正弦值按键（单操作数运算）
+			Input = NumCheck(Input);
+			double compute = Math.sin(Double.parseDouble(Input));
+			InputText.setText("");
+			ResultText.setText(handleStringResunltNum(compute)); 
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("cos".indexOf(GetButton) >= 0){     //按下求余弦值按键（单操作数运算）
+			Input = NumCheck(Input);
+			double compute = Math.cos(Double.parseDouble(Input));
+			InputText.setText("");
+			ResultText.setText(String.valueOf(handleStringResunltNum(compute)));
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("tan".indexOf(GetButton) >= 0){     //按下求正切值按键（单操作数运算）
+			Input = NumCheck(Input);
+			double compute = Math.tan(Double.parseDouble(Input));
+			InputText.setText("");
+			ResultText.setText(String.valueOf(handleStringResunltNum(compute)));
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("log".indexOf(GetButton) >= 0){     //按下求以10为底对数值按键（单操作数运算）
+			Input = NumCheck(Input);
+			double compute = Math.log10(Double.parseDouble(Input));
+			InputText.setText("");
+			ResultText.setText(String.valueOf(handleStringResunltNum(compute)));
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("Exp".indexOf(GetButton) >= 0){     //按下求以自然常数为底的指数运算值按键（单操作数运算）
+			Input = NumCheck(Input);
+			double compute = Math.exp(Double.parseDouble(Input));
+			InputText.setText("");
+			ResultText.setText(String.valueOf(handleStringResunltNum(compute)));
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("±".indexOf(GetButton) >= 0){     //按下求相反数值按键（单操作数运算）
+			Input = NumCheck(Input);     //判断上次计算结果的正负
+			double compute = (-1)*(Double.parseDouble(Input));
+			InputText.setText("");
+			ResultText.setText(String.valueOf(handleStringResunltNum(compute)));
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("n!".indexOf(GetButton) >= 0){     //按下求阶乘数值按键（单操作数运算）
+			Input = NumCheck(Input);
+			double compute = factorial((Double.parseDouble(Input)));
+			InputText.setText("");
+			ResultText.setText(String.valueOf(handleStringResunltNum(compute)));
+			Input = String.valueOf(handleStringResunltNum(compute));
+		} else if("Bin".indexOf(GetButton) >= 0){     //按下求对应二进制数值按键（单操作数运算）
+			InputText.setText("");
+			Input = ToBinary(Double.parseDouble(Input));
+			ResultText.setText(Input); 
+		} else if("Dec".indexOf(GetButton) >= 0){     //按下求二进制数对应的十进制数值的运算（单操作数运算）
+			String compute = handleStringResunltNum(Bin2Dec(Input));
+			InputText.setText("");
+			ResultText.setText(compute);
+			Input = compute;
+		} else if("2Dec".indexOf(GetButton) >= 0){     //二进制下的转换至十进制
+			if(pattern.equals("bin")) {
+				 int resultNum = Integer.parseInt(Input, 2);     //将输入的二进制整数转化为十进制整数
+					InputText.setText("");
+					ResultText.setText(String.valueOf(resultNum));
+			} else if(pattern.equals("oct")) {
+				 int resultNum = Integer.parseInt(Input, 8);     //将输入的八进制整数转化为十进制整数
+					InputText.setText("");
+					ResultText.setText(String.valueOf(resultNum));
+			} else if(pattern.equals("hex")) {
+				 int resultNum = Integer.parseInt(Input, 16);     //将输入的十六进制整数转化为十进制整数
+					InputText.setText("");
+					ResultText.setText(String.valueOf(resultNum));
+			}
+		} else if("2Oct".indexOf(GetButton) >= 0){     //二进制下的转换至八进制
+			if(pattern.equals("bin")) {
+				 int resultNum = Integer.parseInt(Input, 2);     //将输入的二进制整数转化为十进制整数
+				 String oct = Integer.toOctalString(resultNum);     //将该十进制整数表示为八进制字符串
+					InputText.setText("");
+					ResultText.setText(oct);
+			} else if(pattern.equals("hex")) {
+				 int resultNum = Integer.parseInt(Input,16);     //将输入的二进制整数转化为十进制整数
+				 String oct = Integer.toOctalString(resultNum);     //将该十进制整数表示为八进制字符串
+					InputText.setText("");
+					ResultText.setText(oct);
+			}
+		} else if("2Hex".indexOf(GetButton) >= 0){     //二进制下的进制转换
+				if(pattern.equals("bin")) {
+					 int resultNum = Integer.parseInt(Input, 2);     //将输入的二进制整数转化为十进制整数
+					 String hex = Integer.toHexString(resultNum);
+						InputText.setText("");
+						ResultText.setText(hex.toUpperCase());
+				} else if(pattern.equals("oct")) {
+					 int resultNum = Integer.parseInt(Input, 8);     //将输入的八进制整数转化为十进制整数
+					 String hex = Integer.toHexString(resultNum);
+						InputText.setText("");
+						ResultText.setText(hex.toUpperCase());
+				}
+			} else if("2Bin".indexOf(GetButton) >= 0){     //二进制下的进制转换
+				if(pattern.equals("oct")) {
+					 int resultNum = Integer.parseInt(Input, 8);     //将输入的八进制整数转化为十进制整数
+					 String bin = Integer.toBinaryString(resultNum);
+						InputText.setText("");
+						ResultText.setText(bin);
+				} else if(pattern.equals("hex")) {
+					 int resultNum = Integer.parseInt(Input, 16);     //将输入的十六进制整数转化为十进制整数
+					 String bin = Integer.toBinaryString(resultNum);
+						InputText.setText("");
+						ResultText.setText(bin);
+				}
+			} else if("NOT".indexOf(GetButton) >= 0){     //二进制下的转换至八进制
+				if(pattern.equals("bin")) {
+					int resultNum = Integer.parseInt(Input, 2);     //将输入的二进制整数转化为十进制整数
+					Input = Integer.toBinaryString(~resultNum).substring(32-Input.length());     //取反，截取需要的部分
+						InputText.setText("");
+						ResultText.setText(Input);
+				} else if(pattern.equals("oct")) {
+					 int resultNum = Integer.parseInt(Input,8);
+					 Input = Integer.toOctalString(~resultNum).substring(11-Input.length());
+						InputText.setText("");
+						ResultText.setText(Input);
+				} else if(pattern.equals("hex")) {
+					 int resultNum = Integer.parseInt(Input,16);
+					 Input = Integer.toHexString(~resultNum).substring(8-Input.length()).toUpperCase();
+						InputText.setText("");
+						ResultText.setText(Input);
+				}
+			} else if("AND".indexOf(GetButton) >= 0){     //与运算
+				if(pattern.equals("bin")) {
+					Input = Input+"&";
+					InputText.setText(Input);
+				} else if(pattern.equals("oct")) {
+					Input = Input+"&";
+					InputText.setText(Input);
+				}else if(pattern.equals("hex")) {
+					Input = Input+"&";
+					InputText.setText(Input);
+				}
+			} else if("OR".indexOf(GetButton) >= 0){     //或运算
+				if(pattern.equals("bin")) {
+					Input = Input+"|";
+					InputText.setText(Input);
+				} else if(pattern.equals("oct")) {
+					Input = Input+"|";
+					InputText.setText(Input);
+				}else if(pattern.equals("hex")) {
+					Input = Input+"|";
+					InputText.setText(Input);
+				}
+			} else if("XOR".indexOf(GetButton) >= 0){     //或运算
+				if(pattern.equals("bin")) {
+					Input = Input+"⊕";
+					InputText.setText(Input);
+				} else if(pattern.equals("oct")) {
+					Input = Input+"⊕";
+					InputText.setText(Input);
+				}else if(pattern.equals("hex")) {
+					Input = Input+"⊕";
+					InputText.setText(Input);
+				}
+			} else if("Lsh".indexOf(GetButton) >= 0){     //或运算
+				if(pattern.equals("bin")) {
+					Input = Input+"<";
+					InputText.setText(Input);
+				} else if(pattern.equals("oct")) {
+					Input = Input+"<";
+					InputText.setText(Input);
+				}else if(pattern.equals("hex")) {
+					Input = Input+"<";
+					InputText.setText(Input);
+				}
+			} else if("Rsh".indexOf(GetButton) >= 0){     //或运算
+				if(pattern.equals("bin")) {
+					Input = Input+">";
+					InputText.setText(Input);
+				} else if(pattern.equals("oct")) {
+					Input = Input+">";
+					InputText.setText(Input);
+				}else if(pattern.equals("hex")) {
+					Input = Input+">";
+					InputText.setText(Input);
+				}
+			} else if("←".compareTo(GetButton) == 0){     //按下退格键对算式进行删改
+			if(InputText.getText().length()!=0) {
+				InputText.setText(InputText.getText().substring(0,InputText.getText().length()- 1));
+				Input = Input.substring(0,Input.length() - 1);     //对保存的输入算式进行更改
+				if(InputText.getText().length()==0) {
+					Input = "";
+					ResultText.setText("0");
+					if(ResultText.getText().equals("0")) {      //若直接按下运算符（单/双操作数，是以0为初始操作数或第一位操作数的）
+						Input = "0";
+					}
+				}
+			}
+		} else if("CE".compareTo(GetButton) == 0){     //按下CE键
+			ResultText.setText("0");    //将运算结果置0
+		} else if("AC".compareTo(GetButton) == 0){     //按下C键
+			Input = "0";    //算式初始值重新置为0
+			InputText.setText("");     //清除所有表达式及运算结果
+			ResultText.setText("0");
+		} else if("MC".compareTo(GetButton) == 0) {    //按下计算器内存清零键
+			memory = "";
+		} else if("MS".compareTo(GetButton) == 0) {    //按下存储当前算式文本框的内容
+			memory = InputText.getText();
+		} else if("MR".compareTo(GetButton) == 0) {    //按下将当前计算器内存进行显示按键
+			if(InputText.getText().equals("")) {
+				Input = memory;
+				InputText.setText(Input);
+			} else {
+				Input = InputText.getText()+memory;
+				InputText.setText(Input);
+			}
+		} else if("M+".compareTo(GetButton) == 0) {     //在计算器内存中有内容时，再添加新内容进内存
+			memory = memory + InputText.getText();
+		}
+
+		Object Item = event.getSource();
+		if(Item == hexItem) {      //切换至十六进制
+			operatecontainer.remove(InputText);
+			operatecontainer.remove(ResultText);
+			operatecontainer.remove(WorkWindow);
+			BuildProgrammerCalculator();
+			for(int i=0;i<ProButtonName.length;i++) {
+				if(ProButtonName[i].equals("2Hex")){     //设置十六进制下不可执行操作
+					pronormbutton[i].setEnabled(false);
+				}
+			}
+			pattern = "hex";
+		} else if (Item == octItem) {     //切换至八进制
+			operatecontainer.remove(InputText);
+			operatecontainer.remove(ResultText);
+			operatecontainer.remove(WorkWindow);
+			BuildProgrammerCalculator();
+			for(int i=0;i<ProButtonName.length;i++) {
+				if(ProButtonName[i].equals("2Oct")||ProButtonName[i].equals("8")||ProButtonName[i].equals("9")||
+				   ProButtonName[i].equals("A")||ProButtonName[i].equals("B")||ProButtonName[i].equals("C")||
+				   ProButtonName[i].equals("D")||ProButtonName[i].equals("E")||ProButtonName[i].equals("F")){     //设置八进制下不可执行操作
+					pronormbutton[i].setEnabled(false);
+				}
+			}
+			pattern = "oct";
+		} else if (Item == binItem) {     //切换至二进制
+			operatecontainer.remove(InputText);
+			operatecontainer.remove(ResultText);
+			operatecontainer.remove(WorkWindow);
+			BuildProgrammerCalculator();
+			for(int i=0;i<ProButtonName.length;i++) {
+				if(ProButtonName[i].equals("2")||ProButtonName[i].equals("3")||ProButtonName[i].equals("4")||
+				   ProButtonName[i].equals("5")||ProButtonName[i].equals("6")||ProButtonName[i].equals("7")||
+				   ProButtonName[i].equals("8")||ProButtonName[i].equals("9")||ProButtonName[i].equals("A")||
+			       ProButtonName[i].equals("B")||ProButtonName[i].equals("C")||ProButtonName[i].equals("D")||
+				   ProButtonName[i].equals("E")||ProButtonName[i].equals("F")||ProButtonName[i].equals("2Bin")){
+				   pronormbutton[i].setEnabled(false);
+				}
+			}
+			pattern = "bin";
+		} else if (Item == scienceItem) {     //切换至科学计算器
+			operatecontainer.remove(InputText);
+			operatecontainer.remove(ResultText);
+			operatecontainer.remove(WorkWindow);
+			BuildScienceCalculator();
+			pattern = "sci";
+		} else if (Item == copyItem) {     //按下'复制'菜单栏
+			copy = ResultText.getText();
+		} else if (Item == pasteItem) {      //按下'粘贴'菜单栏
+			if(InputText.getText().equals("")) {
+				double temp;
+				temp = Double.parseDouble(copy);
+				copy = handleStringResunltNum(temp);
+				InputText.setText(copy);
+				Input=copy;
+			}
+		} else if (Item == exitItem) {      //按下'退出'菜单栏
+			System.exit(0);
+		} else if (Item == topHelp) {     //按下'帮助主题'菜单栏
+			JOptionPane.showMessageDialog(operatecontainer, scrollHelp);
+		}
+	}
+	
+    private int CMP(char a){     //运算符匹配
+        if(a == '#'){return 0;}
+        if(a == '('){return 1;}
+        if(a == '+' || a == '-'){return 3;}
+        if(a == '×' || a == '÷' || a == 'M'){return 4;}
+        if(a == '^' || a == '√'){return 5;}
+        if(a == ')'){return 6;}
+        return -1;
+    }
+	
+    private String Change(String Input){
+        Input += "#";
+        String t = "";
+        String NPR = "";
+        Stack<Character> S = new Stack<Character>();
+        for(int i=0;i<Input.length();i++){
+            if(Input.charAt(i) >= '0' && Input.charAt(i) <= '9'){t += Input.charAt(i);}
+            else if(Input.charAt(i) == '.'){t += Input.charAt(i);}
+            else if(Input.charAt(i) == '#'){
+                if(t.length() != 0){NPR += t + " ";}
+                t = "";
+            }
+            else if(Input.charAt(i) == '+' || Input.charAt(i) == '-' || Input.charAt(i) == '×' || Input.charAt(i) == '÷' 
+            		|| Input.charAt(i) == '^' || Input.charAt(i) == '√'|| Input.charAt(i) == 'M'){
+                if(t.length() != 0){NPR += t + " ";}
+                t = "";
+                if(S.size() == 0){
+                    S.push(Input.charAt(i));
+                }
+                else if(CMP(S.peek()) < CMP(Input.charAt(i))){
+                    S.push(Input.charAt(i));
+                }
+                else if(CMP(S.peek()) >= CMP(Input.charAt(i))){
+                    NPR += S.peek() + " ";
+                    S.pop();
+                    S.push(Input.charAt(i));
+                }
+            }
+            else if(Input.charAt(i) == '('){
+                if(t.length() != 0){NPR += t + " ";}
+                t = "";
+                S.push(Input.charAt(i));
+            }
+            else if(Input.charAt(i) == ')'){
+                if(t.length() != 0){NPR += t + " ";}
+                t = "";
+                while(S.peek() != '('){
+                    NPR += S.peek() + " ";
+                    S.pop();
+                }
+                S.pop();
+            }
+        }
+        while(S.size() != 0){
+            NPR += S.peek() + " ";
+            S.pop();
+        }
+        return NPR;
+    }
+    
+    private double SolveDouble(double Num1,double Num2,char character){
+    	double resultNum = 0.0;
+    	if(character == '+'){
+    		resultNum = Num1 + Num2;
+    	} else if(character == '-'){
+    		resultNum = Num1 - Num2;
+    	} else if(character == '×'){
+    		resultNum = Num1 * Num2;
+    	} else if(character == '÷'){
+    		resultNum = Num1 / Num2;
+    	} else if(character == '^'){
+    		resultNum = Math.pow(Num1,Num2);
+    	} else if(character == '√'){
+    		resultNum = Math.pow(Num2,1/Num1);
+    	} else if(character == 'M'){
+    		resultNum = Num1 % Num2;
+    	}
+    	return resultNum;
+    }
+    
+    private int BinSolveDouble(int Num1,int Num2,char character){      //程序员模式下的求解方法（不考虑优先及运算）
+    	int resultNum = 0;
+    	if(character == '+'){
+    		resultNum = Num1 + Num2;
+    	} else if(character == '-'){
+    		resultNum = Num1 - Num2;
+    	} else if(character == '×'){
+    		resultNum = Num1 * Num2;
+    	} else if(character == '÷'){
+    		resultNum = Num1 / Num2;
+    	} else if(character == 'M'){
+    		resultNum = Num1 % Num2;
+    	} else if(character == '&'){
+    		resultNum = Num1 & Num2;
+    	} else if(character == '|'){
+    		resultNum = Num1 | Num2;
+    	} else if(character == '⊕'){
+    		resultNum = Num1 ^ Num2;
+    	} else if(character == '<'){
+    		resultNum = Num1 << Num2;
+    	} else if(character == '>'){
+    		resultNum = Num1 >>> Num2;
+    	}
+    	return resultNum;
+    }
+    
+    private double Cal(String equation){
+        String SolveEquation[] = equation.split("\\ ");     //将输入字符串以空白为间隔分为多个字符串
+        Stack<Double> EquationStore = new Stack<Double>();     //新建栈存放双精度浮点数
+        for(int i=0;i<SolveEquation.length;i++){
+            if(SolveEquation[i].length() == 0){
+            	continue;     //若当前字符串不包含任何值，则访问下一个字符串
+            	}
+            if(SolveEquation[i].charAt(0) <= '9' && SolveEquation[i].charAt(0) >= '0'){     //输入的是数值
+                EquationStore.push(Double.valueOf(SolveEquation[i]));     //把操作数填充进栈中
+            }
+            else{
+                double Num2 = EquationStore.peek();    //先后弹出两个操作数（栈顶元素）
+                EquationStore.pop();   
+                double Num1 = EquationStore.peek();     
+                EquationStore.pop();
+                double resultNum = SolveDouble(Num1,Num2,SolveEquation[i].charAt(0));
+                EquationStore.push(resultNum);      //求解该中缀表达式，将结果推入栈
+            }
+        }
+        double ans = EquationStore.peek();     //访问运算结束后的栈顶元素（一定为运算结果）
+        return ans;    //返回运算结果
+    }
+    
+	public String handleStringResunltNum(double resultNum) {     //区分处理整数结果和双精度结果的显示和操作
+    	String changedoutput;
+    	if(resultNum-(int)resultNum != 0) {
+    		changedoutput = String.valueOf(resultNum);
+    	}else {
+    		changedoutput = String.valueOf((int)resultNum);
+    	}
+    	return changedoutput;
+    }
+	
+	public String NumCheck(String Input) {     //对于单操作数运算符，直接采用上次结算的结果时，若结果为负数（由于计算器自动补0），此处将0去掉
+    	if(Input.length()>1) {
+    		char check1 = Input.charAt(0);
+    		char check2 = Input.charAt(1);
+    		if(check1 == '0' & check2 == '-') {
+    			Input = Input.substring(1);
+    		}
+    	}
+    	return Input;
+    }
+	
+	public double factorial(double num) {     //阶乘运算函数
+		if(num==1) {
+			return 1;
+		}else {
+			return num*factorial(num-1);
+		}
+	}
+	
+    /*================用于双精度十进制数转化为二进制数的方法================*/
+    public String ToBinary(double Num) {
+		int Integer = (int) Num;    //取整数部分
+        double Decimals = Num-Integer;    //取小数部分
+        
+        String temp = trans(Integer);     //整数部分转换成二进制
+        String temp2 = trans((float)Decimals);     //小数部分转换成二进制
+        
+        temp2 = handleStringResunltNum(Double.parseDouble(temp2));
+        
+        return temp+"."+temp2;
+	}
+	
+	public String trans(int Integer){     //转整数部分
+        String temp = "";
+        while(Integer!=0){     //一直到整数部分为0
+            temp = (Integer%2)+temp;    //余数，并且拼接起来
+            Integer = Integer/2;     //除2取整
+        }
+        return temp;//余数拼起来后返回
+    }
+  
+    public String trans(float Decimals){
+        if(Decimals>1){    //如果大于1，则有整数部分，出错了
+            return "false";
+        }
+        String temp = "";
+        int weishu = 10;    //小数位数，精度
+        for(int i=0;i<weishu;i++){
+            Decimals*=2;    //乘以2
+            if(Decimals>=1){     //取整
+                temp+="1";
+                Decimals = Decimals-1;    //去除整数后取小数
+            }else{
+                temp+="0";    //取整数位
+            }
+        }
+        return temp;//返回小数二进制数
+    }
+    /*======================================================================*/
+    
+    //将二进制数（含二进制小数）转化为双精度十进制数
+	public double Bin2Dec(String BinNum) {
+		int n=0,c=0,count=1,rem,pos=0,i,n2=0;
+		double str1=0,str2=0;
+
+		n=(int)Double.parseDouble(BinNum);     //获取该二进制数（字符串格式）的整数部分
+
+		while(n>0) {     //将二进制字符串的整数部分转化为十进制
+			rem=n%10;
+			str1=str1+(rem*(Math.pow(2,c)));
+			n=n/10;
+			c++;
+		}
+		for(i=0; i<=(BinNum.length()-1); i++) {
+			if(BinNum.charAt(i)=='.'){
+				pos=i;
+				break;
+			}
+		}
+	    
+		//获取该二进制数的小数部分
+		StringBuilder sb= new StringBuilder(BinNum.substring(pos+1, BinNum.length()));
+		n2=Integer.parseInt((sb.reverse()).toString());
+
+		while(n2>0) {    //小数部分转十进制
+			rem=(int)(n2%10);
+			str2=str2+(rem*(1/(Math.pow(2,count))));
+			n2=n2/10;
+			count++;
+		}
+		return str1+str2;
+	}
+	
+	public String BinAddZero(String Result,String Input1,String Input2) {     //补0函数
+		if(Result.length()<Input1.length()||Result.length()<Input2.length()) {
+			for(int i=0;i<Min(Input1.length(),Input2.length())-Input.length();i++) {
+				Result = "0"+Result;    //补0
+			}
+			return Result;
+		} else {
+			return Result;
+		}
+	}
+	
+	public int Min(int Num1, int Num2){    //返回两个（整）数中的较小值
+		if(Num1<Num2){
+			return Num1; 
+		} else {
+			return Num2;
+		}
+	}
+	
+	//主函数
+	public static void main(String args[]) {
+		new FunctionalityCalculator();
+	}
+	
+}

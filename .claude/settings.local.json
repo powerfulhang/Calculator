@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m venv .venv)",
+      "Bash(.venv/Scripts/python -c \"import py_compile; py_compile.compile\\('calculator_engine.py', doraise=True\\); print\\('engine OK'\\)\")",
+      "Bash(.venv/Scripts/python -c \"import py_compile; py_compile.compile\\('calculator_ui.py', doraise=True\\); print\\('ui OK'\\)\")",
+      "Bash(.venv/Scripts/python -c \"import py_compile; py_compile.compile\\('main.py', doraise=True\\); print\\('main OK'\\)\")",
+      "Bash(.venv/Scripts/python -c ' *)",
+      "Bash(.venv/Scripts/python main.py)",
+      "WebSearch",
+      "Bash(.venv/Scripts/pip install *)",
+      "Bash(.venv/Scripts/pyinstaller --onefile --windowed --clean --name=\"Calculator\" main.py)",
+      "Bash(./dist/Calculator.exe)",
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(.venv/Scripts/python -c \"import py_compile; py_compile.compile\\('calculator_ui.py', doraise=True\\); print\\('UI OK'\\)\")",
+      "Bash(.venv/Scripts/python -c \"import py_compile; py_compile.compile\\('calculator_engine.py', doraise=True\\); print\\('Engine OK'\\)\")"
+    ]
+  }
+}
