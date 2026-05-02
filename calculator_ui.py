@@ -20,11 +20,12 @@ from __future__ import annotations
 import math
 import tkinter as tk
 from tkinter import messagebox
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List
 
 import calculator_engine as eng
 
-__author__ = "hang.shi"
+__author__ = "powerfulhang"
+__version__ = "1.0"
 
 # =============================================================================
 # Constants
@@ -90,6 +91,164 @@ _PROG_DISABLED: Dict[str, set] = {
             'A', 'B', 'C', 'D', 'E', 'F', '.'},
 }
 
+HELP_SECTIONS: Dict[str, str] = {
+    '快速开始': """计算器帮助
+
+本窗口用于查询计算器的模式、按键和操作规则。左侧选择主题，右侧查看说明。
+
+基本流程
+1. 选择计算模式：科学模式，或程序员模式下的二进制、八进制、十进制、十六进制。
+2. 输入数字和运算符。
+3. 按 = 计算结果。
+4. 继续输入运算符可把当前结果作为下一轮运算数。
+
+显示区
+- 上方：当前输入表达式。
+- 下方：当前结果或错误信息。
+
+清除键
+- CE：清除当前输入，结果回到 0。
+- AC：清除当前输入、结果和科学模式的连续运算缓存。
+- ←：删除当前输入的最后一个字符。""",
+
+    '科学模式': """科学模式
+
+支持的基础运算
+- +：加法
+- -：减法，也支持负数输入，例如 -5、5*-2、5--2
+- ×：乘法
+- ÷：除法
+- M：取模
+- ^：乘方，右结合，例如 2^3^2 = 512
+- √：开方。√9 等价于 2√9，3√8 表示三次根
+- ( 和 )：括号
+
+支持的函数
+- sin、cos、tan：三角函数，输入按弧度解释
+- log：常用对数，以 10 为底
+- Exp：自然指数 e^x
+- 1/x：倒数
+- n!：阶乘，仅支持非负整数
+- ±：对当前数值取反
+- π：插入圆周率
+
+二进制转换
+- Bin：把当前十进制数转换为二进制
+- Dec：把当前二进制数转换为十进制
+- Dec 会校验输入，只接受 0、1、小数点和可选负号。""",
+
+    '程序员模式': """程序员模式
+
+模式入口
+- 选项(S) -> 切换(H) -> 程序员 -> 十六进制 / 八进制 / 二进制
+- 使用 2Dec 转换后会进入十进制程序员状态
+
+进制与可输入字符
+- Bin：只允许 0、1
+- Oct：允许 0 到 7
+- Dec：允许 0 到 9
+- Hex：允许 0 到 9、A 到 F
+
+转换规则
+- 2Bin：转换为二进制，并把后续运算切换到二进制模式
+- 2Oct：转换为八进制，并把后续运算切换到八进制模式
+- 2Dec：转换为十进制，并把后续运算切换到十进制模式
+- 2Hex：转换为十六进制，并把后续运算切换到十六进制模式
+
+示例
+Hex 模式输入 AB，按 2Bin 得到 10101011。
+此时再输入 +1=，会按二进制计算，结果为 10101100。""",
+
+    '程序员运算符': """程序员运算符
+
+算术运算
+- +：加法
+- -：减法
+- ×：乘法
+- ÷：整数除法
+- M：取模
+
+位运算
+- AND：按位与
+- OR：按位或
+- XOR：按位异或
+- NOT：32 位按位取反
+- Lsh：左移
+- Rsh：右移
+
+优先级
+1. ×、÷、M
+2. +、-
+3. Lsh、Rsh
+4. AND
+5. XOR
+6. OR
+
+说明
+- 程序员模式按整数计算，不支持小数点。
+- 移位运算按 32 位结果处理。""",
+
+    '内存与剪贴板': """内存与剪贴板
+
+内存键
+- MC：清空内存
+- MS：把当前可见值存入内存
+- MR：把内存值追加到当前输入
+- M+：把当前可见值累加到内存
+
+复制和粘贴
+- 复制(C) Ctrl+C：复制当前结果区内容
+- 粘贴(V) Ctrl+V：粘贴数值内容到当前输入
+- 非数值剪贴板内容会被忽略
+
+注意
+- 内存值以文本形式插入当前输入。
+- 在程序员模式中，插入的内存值需要符合当前进制。""",
+
+    '键盘快捷键': """键盘快捷键
+
+通用
+- 0-9：输入数字
+- .：输入小数点，程序员模式中禁用
+- +、-、*、/：四则运算
+- %：取模 M
+- ^：科学模式为乘方，程序员模式为 XOR
+- Enter：等号
+- Backspace：退格
+- Delete：CE
+- Escape：AC
+- Ctrl+C：复制结果
+- Ctrl+V：粘贴数值
+
+程序员模式
+- A-F：输入十六进制数字
+- &：AND
+- |：OR
+- ~：NOT
+- <：Lsh
+- >：Rsh""",
+
+    '错误信息': """常见错误
+
+Cannot divide by zero
+- 除数为 0。
+
+Cannot modulo by zero
+- 取模运算的右操作数为 0。
+
+Incomplete expression
+- 表达式不完整，例如末尾是运算符。
+
+Malformed expression
+- 表达式结构不合法，例如数字和括号之间缺少运算符。
+
+Invalid binary number
+- 二进制转换输入包含非法字符。
+
+Factorial is only defined for non-negative integers
+- 阶乘只支持非负整数。""",
+}
+
 
 # =============================================================================
 # Main Application
@@ -109,6 +268,9 @@ class CalculatorApp:
         self.memory: str = ''             # memory string (MS/MR/MC/M+)
         self.clipboard: str = ''          # copy/paste clipboard
         self._sci_last_result: str = '0'  # last result in scientific mode (for chaining)
+        self.help_window: tk.Toplevel | None = None
+        self.help_listbox: tk.Listbox | None = None
+        self.help_text: tk.Text | None = None
 
         # ---- Build UI ----
         self._build_menu_bar()
@@ -158,7 +320,9 @@ class CalculatorApp:
 
         # -- 帮助(H) --
         help_menu = tk.Menu(menubar, tearoff=0)
-        help_menu.add_command(label='关于...', command=self._on_help)
+        help_menu.add_command(label='帮助文档', command=self._on_help_document)
+        help_menu.add_separator()
+        help_menu.add_command(label='关于', command=self._on_about)
 
         menubar.add_cascade(label='选项(S)', menu=edit_menu)
         menubar.add_cascade(label='帮助(H)', menu=help_menu)
@@ -707,15 +871,109 @@ class CalculatorApp:
             except ValueError:
                 pass  # ignore non-numeric clipboard content
 
-    def _on_help(self) -> None:
+    def _on_help_document(self) -> None:
+        if self.help_window is not None and self.help_window.winfo_exists():
+            self.help_window.deiconify()
+            self.help_window.lift()
+            self.help_window.focus_force()
+            return
+
+        window = tk.Toplevel(self.root)
+        window.title('计算器帮助')
+        window.geometry('760x560')
+        window.minsize(680, 480)
+        window.transient(self.root)
+        window.protocol('WM_DELETE_WINDOW', self._close_help)
+        self.help_window = window
+
+        container = tk.Frame(window)
+        container.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        container.grid_columnconfigure(1, weight=1)
+        container.grid_rowconfigure(0, weight=1)
+
+        nav_frame = tk.Frame(container)
+        nav_frame.grid(row=0, column=0, sticky='ns', padx=(0, 10))
+        tk.Label(
+            nav_frame,
+            text='目录',
+            anchor=tk.W,
+            font=(FONT_FAMILY, 11, 'bold'),
+        ).pack(fill=tk.X, pady=(0, 5))
+
+        listbox = tk.Listbox(
+            nav_frame,
+            width=18,
+            exportselection=False,
+            font=(FONT_FAMILY, 11),
+        )
+        listbox.pack(side=tk.LEFT, fill=tk.Y, expand=True)
+        scrollbar = tk.Scrollbar(nav_frame, orient=tk.VERTICAL, command=listbox.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        listbox.configure(yscrollcommand=scrollbar.set)
+
+        doc_frame = tk.Frame(container)
+        doc_frame.grid(row=0, column=1, sticky='nsew')
+        doc_frame.grid_columnconfigure(0, weight=1)
+        doc_frame.grid_rowconfigure(0, weight=1)
+
+        text = tk.Text(
+            doc_frame,
+            wrap=tk.WORD,
+            font=('Microsoft YaHei UI', 11),
+            padx=14,
+            pady=12,
+            relief=tk.FLAT,
+            bg='#F7F7F7',
+            fg=FG_COLOR,
+        )
+        text.grid(row=0, column=0, sticky='nsew')
+        text_scrollbar = tk.Scrollbar(doc_frame, orient=tk.VERTICAL, command=text.yview)
+        text_scrollbar.grid(row=0, column=1, sticky='ns')
+        text.configure(yscrollcommand=text_scrollbar.set, state=tk.DISABLED)
+        text.tag_configure('title', font=('Microsoft YaHei UI', 16, 'bold'), spacing3=10)
+        text.tag_configure('body', spacing1=3, spacing3=5)
+
+        self.help_listbox = listbox
+        self.help_text = text
+        for section in HELP_SECTIONS:
+            listbox.insert(tk.END, section)
+        listbox.bind('<<ListboxSelect>>', self._on_help_section_selected)
+        listbox.selection_set(0)
+        self._show_help_section('快速开始')
+
+    def _on_help_section_selected(self, _event: tk.Event) -> None:
+        if self.help_listbox is None:
+            return
+        selection = self.help_listbox.curselection()
+        if not selection:
+            return
+        section = self.help_listbox.get(selection[0])
+        self._show_help_section(section)
+
+    def _show_help_section(self, section: str) -> None:
+        if self.help_text is None:
+            return
+        content = HELP_SECTIONS[section]
+        title, _, body = content.partition('\n')
+        self.help_text.configure(state=tk.NORMAL)
+        self.help_text.delete('1.0', tk.END)
+        self.help_text.insert(tk.END, title + '\n', 'title')
+        self.help_text.insert(tk.END, body.lstrip(), 'body')
+        self.help_text.configure(state=tk.DISABLED)
+        self.help_text.yview_moveto(0)
+
+    def _close_help(self) -> None:
+        if self.help_window is not None and self.help_window.winfo_exists():
+            self.help_window.destroy()
+        self.help_window = None
+        self.help_listbox = None
+        self.help_text = None
+
+    def _on_about(self) -> None:
         messagebox.showinfo(
-            '关于...',
-            '执行简单计算\n'
-            '1. 键入计算的第一个数字。\n'
-            '2. 单击"+"执行加、"-"执行减、"*"执行乘或"/"执行除。\n'
-            '3. 键入计算的下一个数字。\n'
-            '4. 输入所有剩余的运算符和数字。\n'
-            '5. 单击"="。',
+            '关于',
+            f'计算器\n版本：{__version__}\n作者：{__author__}',
+            parent=self.root,
         )
 
     # =========================================================================
