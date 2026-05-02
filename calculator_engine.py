@@ -52,29 +52,54 @@ def infix_to_postfix(expr: str) -> str:
     Returns:
         Space-delimited RPN token string, e.g. ``"2 3 + 4 *"``.
     """
-    if not expr.endswith('#'):
-        expr += '#'
-
     output: List[str] = []
     stack: List[str] = []       # operator stack
-    temp: List[str] = []        # current operand accumulator
+    expecting_operand = True
+    i = 0
 
-    def flush() -> None:
-        if temp:
-            output.append(''.join(temp))
-            temp.clear()
-
-    for ch in expr:
-        if ch.isdigit() or ch == '.':
-            temp.append(ch)
-            continue
+    while i < len(expr):
+        ch = expr[i]
 
         if ch == '#':
-            flush()
             break
 
+        if ch.isspace():
+            i += 1
+            continue
+
+        if ch.isdigit() or ch == '.' or (
+            ch in '+-'
+            and expecting_operand
+            and i + 1 < len(expr)
+            and (expr[i + 1].isdigit() or expr[i + 1] == '.')
+        ):
+            start = i
+            if ch in '+-':
+                i += 1
+            dot_count = 0
+            while i < len(expr) and (expr[i].isdigit() or expr[i] == '.'):
+                if expr[i] == '.':
+                    dot_count += 1
+                    if dot_count > 1:
+                        raise ValueError('Invalid number')
+                i += 1
+            token = expr[start:i]
+            if token in {'+', '-', '.', '+.', '-.'}:
+                raise ValueError('Invalid number')
+            output.append(token)
+            expecting_operand = False
+            continue
+
+        if ch in '+-' and expecting_operand:
+            if ch == '-':
+                output.append('0')
+                stack.append(ch)
+            i += 1
+            continue
+
         if ch in _SCI_OP_CHARS:
-            flush()
+            if expecting_operand:
+                raise ValueError('Incomplete expression')
             prec, left_assoc = _SCI_OPERATORS[ch]
             while stack and stack[-1] != '(':
                 top_prec, _ = _SCI_OPERATORS.get(stack[-1], (0, True))
@@ -83,23 +108,38 @@ def infix_to_postfix(expr: str) -> str:
                 else:
                     break
             stack.append(ch)
+            expecting_operand = True
+            i += 1
             continue
 
         if ch == '(':
-            flush()
             stack.append(ch)
+            expecting_operand = True
+            i += 1
             continue
 
         if ch == ')':
-            flush()
+            if expecting_operand:
+                raise ValueError('Incomplete expression')
             while stack and stack[-1] != '(':
                 output.append(stack.pop())
-            if stack and stack[-1] == '(':
-                stack.pop()          # discard '('
+            if not stack or stack[-1] != '(':
+                raise ValueError('Mismatched parentheses')
+            stack.pop()          # discard '('
+            expecting_operand = False
+            i += 1
             continue
 
+        raise ValueError(f"Invalid character: {ch}")
+
+    if expecting_operand and output:
+        raise ValueError('Incomplete expression')
+
     while stack:
-        output.append(stack.pop())
+        op = stack.pop()
+        if op == '(':
+            raise ValueError('Mismatched parentheses')
+        output.append(op)
 
     return ' '.join(output)
 
@@ -133,7 +173,11 @@ def evaluate_postfix(postfix: str) -> float:
         a = stack.pop()
         stack.append(_apply_sci_operator(a, b, token))
 
-    return stack[-1] if stack else 0.0
+    if not stack:
+        return 0.0
+    if len(stack) != 1:
+        raise ValueError('Malformed expression')
+    return stack[0]
 
 
 def _apply_sci_operator(a: float, b: float, op: str) -> float:
@@ -168,46 +212,22 @@ def _apply_sci_operator(a: float, b: float, op: str) -> float:
 def normalise_input(raw: str) -> str:
     """Apply the same input normalisations as the original Java calculator.
 
-    * Collapses repeated binary operators into one.
-    * Inserts a default ``2`` before ``√`` and ``^`` when there is no
-      explicit left operand.
-    * Replaces ``(-`` with ``(0-`` so parenthesised negatives parse.
-    * Prepends ``0`` when the expression starts with ``-``.
+    * Inserts a default ``2`` before ``√`` when there is no explicit left
+      operand.
     """
     s = raw
 
-    # Collapse repeats
-    for pair in [('++', '+'), ('--', '-'), ('**', '*'), ('//', '/'),
-                 ('MM', 'M'), ('^^', '^'), ('..', '.'),
-                 ('<<', '<'), ('>>', '>'),
-                 ('&&', '&'), ('||', '|')]:
-        while pair[0] in s:
-            s = s.replace(*pair)
+    normalised: List[str] = []
+    for ch in s:
+        if ch == '√':
+            previous = normalised[-1] if normalised else ''
+            if not normalised or previous in _SCI_OP_CHARS or previous == '(':
+                normalised.append('2')
+            normalised.append('v')
+        else:
+            normalised.append(ch)
 
-    # Insert default 2-root / 2-power
-    # '0√' → replace the zero (0th root = square root)
-    s = s.replace('0√', '2√')
-    # Insert '2' before √ and ^ when preceded by an operator or paren
-    for prefix in ['(', '+', '-', '*', '/', 'M']:
-        s = s.replace(f'{prefix}√', f'{prefix}2√')
-        s = s.replace(f'{prefix}^', f'{prefix}2^')
-    # Leading √ / ^ at position 0
-    if s.startswith('√'):
-        s = '2√' + s[1:]
-    if s.startswith('^'):
-        s = '2^' + s[1:]
-
-    # Convert display root symbol to internal token
-    s = s.replace('√', 'v')
-
-    # Negative inside parentheses
-    s = s.replace('(-', '(0-')
-
-    # Leading minus
-    if s.startswith('-'):
-        s = '0' + s
-
-    return s
+    return ''.join(normalised)
 
 
 # =============================================================================
@@ -289,10 +309,18 @@ def binary_to_decimal(bin_str: str) -> float:
     if neg:
         bin_str = bin_str[1:]
 
+    if not bin_str or bin_str.count('.') > 1:
+        raise ValueError('Invalid binary number')
+
     if '.' in bin_str:
         int_part, frac_part = bin_str.split('.', 1)
     else:
         int_part, frac_part = bin_str, ''
+
+    if not int_part and not frac_part:
+        raise ValueError('Invalid binary number')
+    if any(ch not in {'0', '1'} for ch in int_part + frac_part):
+        raise ValueError('Invalid binary number')
 
     result = 0.0
     for i, ch in enumerate(reversed(int_part)):

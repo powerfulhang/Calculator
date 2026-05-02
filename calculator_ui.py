@@ -83,6 +83,7 @@ _PROG_OP_MAP = {'AND': '&', 'OR': '|', 'XOR': '^', 'Lsh': '<', 'Rsh': '>'}
 
 # Disabled buttons per programmer submode (button labels)
 _PROG_DISABLED: Dict[str, set] = {
+    'dec': {'2Dec', 'A', 'B', 'C', 'D', 'E', 'F', '.'},
     'hex': {'2Hex', '.'},
     'oct': {'2Oct', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', '.'},
     'bin': {'2Bin', '2', '3', '4', '5', '6', '7', '8', '9',
@@ -103,7 +104,7 @@ class CalculatorApp:
         self.root.resizable(False, False)
 
         # ---- State ----
-        self.pattern: str = 'sci'         # 'sci', 'bin', 'oct', 'hex'
+        self.pattern: str = 'sci'         # 'sci', 'dec', 'bin', 'oct', 'hex'
         self.input_expr: str = ''         # current expression being built
         self.memory: str = ''             # memory string (MS/MR/MC/M+)
         self.clipboard: str = ''          # copy/paste clipboard
@@ -312,6 +313,12 @@ class CalculatorApp:
         self.root.geometry(PROG_WINDOW_SIZE)
         self._build_prog_buttons()
 
+    def _set_programmer_base(self, base: int) -> None:
+        """Switch programmer mode to the base that matches the visible result."""
+        self.pattern = {2: 'bin', 8: 'oct', 10: 'dec', 16: 'hex'}[base]
+        self.root.geometry(PROG_WINDOW_SIZE)
+        self._build_prog_buttons()
+
     def _clear_all(self) -> None:
         self.input_expr = ''
         self.input_var.set('')
@@ -344,9 +351,14 @@ class CalculatorApp:
         # --- Decimal point ---
         if label == '.':
             self._on_start_fresh()
-            # Prevent duplicate dot in current operand
-            if '.' in self.input_expr:
+            if self._current_sci_operand_has_decimal():
                 return
+            if (
+                not self.input_expr
+                or self.input_expr[-1] in _APPEND_OPS_SCI
+                or self.input_expr[-1] == '('
+            ):
+                self.input_expr += '0'
             self.input_expr += '.'
             self.input_var.set(self.input_expr)
             return
@@ -359,19 +371,35 @@ class CalculatorApp:
             return
 
         # --- Binary operators (chain from last result when display is empty) ---
-        if label in _APPEND_OPS_SCI and label not in ('(', 'π'):
-            if not self.input_expr:
-                return  # absolute leading operator — ignore
+        if label == '√':
+            self._on_start_fresh()
             self.input_expr += label
+            self.input_var.set(self.input_expr)
+            return
+
+        # --- Binary operators (chain from last result when display is empty) ---
+        if label in _APPEND_OPS_SCI and label not in ('(', 'π', '√'):
+            if not self.input_expr:
+                if label == '-':
+                    self.input_expr = '-'
+                    self.input_var.set(self.input_expr)
+                return
+            if self.input_expr[-1] in _APPEND_OPS_SCI:
+                if label == '-' and self.input_expr[-1] != '-':
+                    self.input_expr += label
+                else:
+                    self.input_expr = self.input_expr[:-1] + label
+            else:
+                self.input_expr += label
             self.input_var.set(self.input_expr)
             return
 
         # --- π (replaces result when display empty, appends otherwise) ---
         if label == 'π':
             if not self.input_var.get():
-                self.input_expr = '3.1415926575'
+                self.input_expr = eng.format_result(math.pi)
             else:
-                self.input_expr += '3.1415926575'
+                self.input_expr += eng.format_result(math.pi)
             self.input_var.set(self.input_expr)
             return
 
@@ -390,6 +418,8 @@ class CalculatorApp:
 
         # --- Clear Entry ---
         if label == 'CE':
+            self.input_expr = ''
+            self.input_var.set('')
             self.result_var.set('0')
             return
 
@@ -452,6 +482,16 @@ class CalculatorApp:
                 self.result_var.set(str(exc))
                 self.input_expr = ''
             return
+
+    def _current_sci_operand_has_decimal(self) -> bool:
+        """Return whether the current scientific-mode number already has a dot."""
+        start = len(self.input_expr)
+        while start > 0:
+            previous = self.input_expr[start - 1]
+            if previous in _APPEND_OPS_SCI or previous in '()':
+                break
+            start -= 1
+        return '.' in self.input_expr[start:]
 
     def _get_operand(self) -> str:
         """Return current input, or the last result if the display is empty."""
@@ -517,7 +557,7 @@ class CalculatorApp:
     # -------------------------------------------------------------------------
 
     def _base(self) -> int:
-        return {'bin': 2, 'oct': 8, 'hex': 16}.get(self.pattern, 16)
+        return {'bin': 2, 'oct': 8, 'dec': 10, 'hex': 16}.get(self.pattern, 16)
 
     def _handle_prog_button(self, label: str) -> None:
         base = self._base()
@@ -549,6 +589,8 @@ class CalculatorApp:
 
         # --- CE ---
         if label == 'CE':
+            self.input_expr = ''
+            self.input_var.set('')
             self.result_var.set('0')
             return
 
@@ -595,6 +637,7 @@ class CalculatorApp:
                 self.input_var.set('')
                 self.result_var.set(result_str)
                 self.input_expr = result_str
+                self._set_programmer_base(target)
             except (ValueError, ZeroDivisionError) as exc:
                 self.result_var.set(str(exc))
                 self.input_expr = ''
@@ -623,13 +666,23 @@ class CalculatorApp:
         if label == 'MC':
             self.memory = ''
         elif label == 'MS':
-            self.memory = self.input_var.get()
+            self.memory = self._memory_value()
         elif label == 'MR':
             self._on_start_fresh()
             self.input_expr += self.memory
             self.input_var.set(self.input_expr)
         elif label == 'M+':
-            self.memory += self.input_var.get()
+            try:
+                current = float(self._memory_value() or '0')
+                stored = float(self.memory or '0')
+            except ValueError:
+                self.memory = self._memory_value()
+            else:
+                self.memory = eng.format_result(stored + current)
+
+    def _memory_value(self) -> str:
+        """Return the value visible to the user for memory operations."""
+        return self.input_var.get() or self.result_var.get()
 
     # =========================================================================
     # Menu actions
