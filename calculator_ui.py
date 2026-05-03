@@ -18,14 +18,24 @@ Provides the full calculator window with:
 from __future__ import annotations
 
 import math
+import sys
+from pathlib import Path
 import tkinter as tk
 from tkinter import messagebox
 from typing import Callable, Dict, List
 
 import calculator_engine as eng
+from help_content import HELP_SECTIONS
 
-__author__ = "powerfulhang"
-__version__ = "1.0"
+__author__ = "hang.shi"
+
+
+def _resource_path(filename: str) -> Path:
+    """Resolve path to a bundled resource (works both in dev and PyInstaller)."""
+    if getattr(sys, "frozen", False):
+        return Path(sys._MEIPASS) / filename
+    return Path(__file__).parent / filename
+__version__ = "2.0"
 
 # =============================================================================
 # Constants
@@ -91,164 +101,6 @@ _PROG_DISABLED: Dict[str, set] = {
             'A', 'B', 'C', 'D', 'E', 'F', '.'},
 }
 
-HELP_SECTIONS: Dict[str, str] = {
-    '快速开始': """计算器帮助
-
-本窗口用于查询计算器的模式、按键和操作规则。左侧选择主题，右侧查看说明。
-
-基本流程
-1. 选择计算模式：科学模式，或程序员模式下的二进制、八进制、十进制、十六进制。
-2. 输入数字和运算符。
-3. 按 = 计算结果。
-4. 继续输入运算符可把当前结果作为下一轮运算数。
-
-显示区
-- 上方：当前输入表达式。
-- 下方：当前结果或错误信息。
-
-清除键
-- CE：清除当前输入，结果回到 0。
-- AC：清除当前输入、结果和科学模式的连续运算缓存。
-- ←：删除当前输入的最后一个字符。""",
-
-    '科学模式': """科学模式
-
-支持的基础运算
-- +：加法
-- -：减法，也支持负数输入，例如 -5、5*-2、5--2
-- ×：乘法
-- ÷：除法
-- M：取模
-- ^：乘方，右结合，例如 2^3^2 = 512
-- √：开方。√9 等价于 2√9，3√8 表示三次根
-- ( 和 )：括号
-
-支持的函数
-- sin、cos、tan：三角函数，输入按弧度解释
-- log：常用对数，以 10 为底
-- Exp：自然指数 e^x
-- 1/x：倒数
-- n!：阶乘，仅支持非负整数
-- ±：对当前数值取反
-- π：插入圆周率
-
-二进制转换
-- Bin：把当前十进制数转换为二进制
-- Dec：把当前二进制数转换为十进制
-- Dec 会校验输入，只接受 0、1、小数点和可选负号。""",
-
-    '程序员模式': """程序员模式
-
-模式入口
-- 选项(S) -> 切换(H) -> 程序员 -> 十六进制 / 八进制 / 二进制
-- 使用 2Dec 转换后会进入十进制程序员状态
-
-进制与可输入字符
-- Bin：只允许 0、1
-- Oct：允许 0 到 7
-- Dec：允许 0 到 9
-- Hex：允许 0 到 9、A 到 F
-
-转换规则
-- 2Bin：转换为二进制，并把后续运算切换到二进制模式
-- 2Oct：转换为八进制，并把后续运算切换到八进制模式
-- 2Dec：转换为十进制，并把后续运算切换到十进制模式
-- 2Hex：转换为十六进制，并把后续运算切换到十六进制模式
-
-示例
-Hex 模式输入 AB，按 2Bin 得到 10101011。
-此时再输入 +1=，会按二进制计算，结果为 10101100。""",
-
-    '程序员运算符': """程序员运算符
-
-算术运算
-- +：加法
-- -：减法
-- ×：乘法
-- ÷：整数除法
-- M：取模
-
-位运算
-- AND：按位与
-- OR：按位或
-- XOR：按位异或
-- NOT：32 位按位取反
-- Lsh：左移
-- Rsh：右移
-
-优先级
-1. ×、÷、M
-2. +、-
-3. Lsh、Rsh
-4. AND
-5. XOR
-6. OR
-
-说明
-- 程序员模式按整数计算，不支持小数点。
-- 移位运算按 32 位结果处理。""",
-
-    '内存与剪贴板': """内存与剪贴板
-
-内存键
-- MC：清空内存
-- MS：把当前可见值存入内存
-- MR：把内存值追加到当前输入
-- M+：把当前可见值累加到内存
-
-复制和粘贴
-- 复制(C) Ctrl+C：复制当前结果区内容
-- 粘贴(V) Ctrl+V：粘贴数值内容到当前输入
-- 非数值剪贴板内容会被忽略
-
-注意
-- 内存值以文本形式插入当前输入。
-- 在程序员模式中，插入的内存值需要符合当前进制。""",
-
-    '键盘快捷键': """键盘快捷键
-
-通用
-- 0-9：输入数字
-- .：输入小数点，程序员模式中禁用
-- +、-、*、/：四则运算
-- %：取模 M
-- ^：科学模式为乘方，程序员模式为 XOR
-- Enter：等号
-- Backspace：退格
-- Delete：CE
-- Escape：AC
-- Ctrl+C：复制结果
-- Ctrl+V：粘贴数值
-
-程序员模式
-- A-F：输入十六进制数字
-- &：AND
-- |：OR
-- ~：NOT
-- <：Lsh
-- >：Rsh""",
-
-    '错误信息': """常见错误
-
-Cannot divide by zero
-- 除数为 0。
-
-Cannot modulo by zero
-- 取模运算的右操作数为 0。
-
-Incomplete expression
-- 表达式不完整，例如末尾是运算符。
-
-Malformed expression
-- 表达式结构不合法，例如数字和括号之间缺少运算符。
-
-Invalid binary number
-- 二进制转换输入包含非法字符。
-
-Factorial is only defined for non-negative integers
-- 阶乘只支持非负整数。""",
-}
-
 
 # =============================================================================
 # Main Application
@@ -262,12 +114,18 @@ class CalculatorApp:
         self.root.title('计算器')
         self.root.resizable(False, False)
 
+        # ---- Icon ----
+        icon_path = _resource_path("calculator.ico")
+        if icon_path.exists():
+            self.root.iconbitmap(icon_path)
+
         # ---- State ----
         self.pattern: str = 'sci'         # 'sci', 'dec', 'bin', 'oct', 'hex'
         self.input_expr: str = ''         # current expression being built
         self.memory: str = ''             # memory string (MS/MR/MC/M+)
         self.clipboard: str = ''          # copy/paste clipboard
         self._sci_last_result: str = '0'  # last result in scientific mode (for chaining)
+        self._prog_just_evaluated: bool = False  # True after = in programmer mode (for chaining)
         self.help_window: tk.Toplevel | None = None
         self.help_listbox: tk.Listbox | None = None
         self.help_text: tk.Text | None = None
@@ -396,6 +254,7 @@ class CalculatorApp:
             widget.destroy()
         self._buttons.clear()
 
+        self._reset_grid_config()
         self._button_frame.grid_columnconfigure(tuple(range(5)), weight=1)
         self._button_frame.grid_rowconfigure(tuple(range(7)), weight=1)
 
@@ -422,6 +281,7 @@ class CalculatorApp:
             widget.destroy()
         self._buttons.clear()
 
+        self._reset_grid_config()
         self._button_frame.grid_columnconfigure(tuple(range(6)), weight=1)
         self._button_frame.grid_rowconfigure(tuple(range(6)), weight=1)
 
@@ -442,6 +302,13 @@ class CalculatorApp:
                     btn.config(state=tk.DISABLED)
                 self._buttons.append(btn)
 
+    def _reset_grid_config(self) -> None:
+        """Clear all grid column/row configurations to prevent stale layouts."""
+        for col in range(10):
+            self._button_frame.grid_columnconfigure(col, weight=0)
+        for row in range(10):
+            self._button_frame.grid_rowconfigure(row, weight=0)
+
     @staticmethod
     def _button_color(label: str) -> str:
         """Return background color for a button based on its label."""
@@ -457,24 +324,28 @@ class CalculatorApp:
         self._clear_all()
         self.pattern = 'sci'
         self.root.geometry(SCI_WINDOW_SIZE)
+        self.root.update_idletasks()
         self._build_science_buttons()
 
     def _switch_to_hex(self) -> None:
         self._clear_all()
         self.pattern = 'hex'
         self.root.geometry(PROG_WINDOW_SIZE)
+        self.root.update_idletasks()
         self._build_prog_buttons()
 
     def _switch_to_oct(self) -> None:
         self._clear_all()
         self.pattern = 'oct'
         self.root.geometry(PROG_WINDOW_SIZE)
+        self.root.update_idletasks()
         self._build_prog_buttons()
 
     def _switch_to_bin(self) -> None:
         self._clear_all()
         self.pattern = 'bin'
         self.root.geometry(PROG_WINDOW_SIZE)
+        self.root.update_idletasks()
         self._build_prog_buttons()
 
     def _set_programmer_base(self, base: int) -> None:
@@ -488,6 +359,7 @@ class CalculatorApp:
         self.input_var.set('')
         self.result_var.set('0')
         self._sci_last_result = '0'
+        self._prog_just_evaluated = False
 
     # =========================================================================
     # Button dispatch
@@ -729,9 +601,10 @@ class CalculatorApp:
 
         # --- Digits and hex letters ---
         if label in valid_digits:
-            if not self.input_var.get():
+            if self._prog_just_evaluated:
                 self.input_expr = ''
                 self.result_var.set('0')
+                self._prog_just_evaluated = False
             self.input_expr += label
             self.input_var.set(self.input_expr)
             return
@@ -742,7 +615,11 @@ class CalculatorApp:
                 return  # ignore leading operator
             mapped = _PROG_OP_MAP.get(label, label)
             mapped = mapped.replace('×', '*').replace('÷', '/')
-            self.input_expr += mapped
+            if self.input_expr and self.input_expr[-1] not in '+-*/&|<>':
+                self.input_expr += mapped
+            elif self.input_expr and self.input_expr[-1] in '+-*/&|<>':
+                self.input_expr = self.input_expr[:-1] + mapped
+            self._prog_just_evaluated = False
             self.input_var.set(self.input_expr)
             return
 
@@ -756,6 +633,7 @@ class CalculatorApp:
             self.input_expr = ''
             self.input_var.set('')
             self.result_var.set('0')
+            self._prog_just_evaluated = False
             return
 
         # --- AC ---
@@ -770,6 +648,7 @@ class CalculatorApp:
                 self.input_var.set(self.input_expr)
                 if not self.input_expr:
                     self.result_var.set('0')
+                self._prog_just_evaluated = False
             return
 
         # --- NOT ---
@@ -778,12 +657,14 @@ class CalculatorApp:
                 return
             try:
                 result_str = eng.bitwise_not(self.input_expr, base)
-                self.input_var.set('')
+                self.input_var.set(result_str)
                 self.result_var.set(result_str)
                 self.input_expr = result_str
+                self._prog_just_evaluated = True
             except (ValueError, ZeroDivisionError) as exc:
                 self.result_var.set(str(exc))
                 self.input_expr = ''
+                self._prog_just_evaluated = False
             return
 
         # --- Dot (disabled in programmer mode like original) ---
@@ -798,13 +679,15 @@ class CalculatorApp:
                 if not self.input_expr:
                     return
                 result_str = eng.convert_base(self.input_expr, base, target)
-                self.input_var.set('')
+                self.input_var.set(result_str)
                 self.result_var.set(result_str)
                 self.input_expr = result_str
+                self._prog_just_evaluated = True
                 self._set_programmer_base(target)
             except (ValueError, ZeroDivisionError) as exc:
                 self.result_var.set(str(exc))
                 self.input_expr = ''
+                self._prog_just_evaluated = False
             return
 
     def _evaluate_prog(self) -> None:
@@ -815,12 +698,14 @@ class CalculatorApp:
             raw = self.input_expr
             raw = raw.replace('×', '*').replace('÷', '/')
             result_str, _ = eng.evaluate_programmer(raw, self._base())
-            self.input_var.set('')
+            self.input_var.set(result_str)
             self.result_var.set(result_str)
             self.input_expr = result_str
+            self._prog_just_evaluated = True
         except (ValueError, ZeroDivisionError) as exc:
             self.result_var.set(str(exc))
             self.input_expr = ''
+            self._prog_just_evaluated = False
 
     # =========================================================================
     # Memory functions

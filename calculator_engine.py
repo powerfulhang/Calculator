@@ -81,11 +81,11 @@ def infix_to_postfix(expr: str) -> str:
                 if expr[i] == '.':
                     dot_count += 1
                     if dot_count > 1:
-                        raise ValueError('Invalid number')
+                        raise ValueError('无效的数字')
                 i += 1
             token = expr[start:i]
             if token in {'+', '-', '.', '+.', '-.'}:
-                raise ValueError('Invalid number')
+                raise ValueError('无效的数字')
             output.append(token)
             expecting_operand = False
             continue
@@ -99,7 +99,7 @@ def infix_to_postfix(expr: str) -> str:
 
         if ch in _SCI_OP_CHARS:
             if expecting_operand:
-                raise ValueError('Incomplete expression')
+                raise ValueError('表达式不完整')
             prec, left_assoc = _SCI_OPERATORS[ch]
             while stack and stack[-1] != '(':
                 top_prec, _ = _SCI_OPERATORS.get(stack[-1], (0, True))
@@ -120,25 +120,25 @@ def infix_to_postfix(expr: str) -> str:
 
         if ch == ')':
             if expecting_operand:
-                raise ValueError('Incomplete expression')
+                raise ValueError('表达式不完整')
             while stack and stack[-1] != '(':
                 output.append(stack.pop())
             if not stack or stack[-1] != '(':
-                raise ValueError('Mismatched parentheses')
+                raise ValueError('括号不匹配')
             stack.pop()          # discard '('
             expecting_operand = False
             i += 1
             continue
 
-        raise ValueError(f"Invalid character: {ch}")
+        raise ValueError(f"无效字符: {ch}")
 
     if expecting_operand and output:
-        raise ValueError('Incomplete expression')
+        raise ValueError('表达式不完整')
 
     while stack:
         op = stack.pop()
         if op == '(':
-            raise ValueError('Mismatched parentheses')
+            raise ValueError('括号不匹配')
         output.append(op)
 
     return ' '.join(output)
@@ -168,7 +168,7 @@ def evaluate_postfix(postfix: str) -> float:
 
         # Binary operator
         if len(stack) < 2:
-            raise ValueError('Incomplete expression')
+            raise ValueError('表达式不完整')
         b = stack.pop()
         a = stack.pop()
         stack.append(_apply_sci_operator(a, b, token))
@@ -176,7 +176,7 @@ def evaluate_postfix(postfix: str) -> float:
     if not stack:
         return 0.0
     if len(stack) != 1:
-        raise ValueError('Malformed expression')
+        raise ValueError('表达式格式错误')
     return stack[0]
 
 
@@ -189,19 +189,19 @@ def _apply_sci_operator(a: float, b: float, op: str) -> float:
         return a * b
     if op == '/':
         if b == 0:
-            raise ZeroDivisionError('Cannot divide by zero')
+            raise ZeroDivisionError('除数不能为零')
         return a / b
     if op == '^':
         return math.pow(a, b)
     if op == 'v':
         if a == 0:
-            raise ValueError('0th root is undefined')
+            raise ValueError('零次根未定义')
         return math.pow(b, 1.0 / a)
     if op == 'M':
         if b == 0:
-            raise ZeroDivisionError('Cannot modulo by zero')
+            raise ZeroDivisionError('取模除数不能为零')
         return math.fmod(a, b)
-    raise ValueError(f'Unknown operator: {op}')
+    raise ValueError(f'未知运算符: {op}')
 
 
 # =============================================================================
@@ -261,9 +261,9 @@ def factorial(n: float) -> float:
     Raises ValueError for negative or non-integer input.
     """
     if n < 0:
-        raise ValueError('Factorial is only defined for non-negative integers')
+        raise ValueError('阶乘仅对非负整数有定义')
     if n != int(n):
-        raise ValueError('Factorial is only defined for integers')
+        raise ValueError('阶乘仅对整数有定义')
     return float(math.factorial(int(n)))
 
 
@@ -310,7 +310,7 @@ def binary_to_decimal(bin_str: str) -> float:
         bin_str = bin_str[1:]
 
     if not bin_str or bin_str.count('.') > 1:
-        raise ValueError('Invalid binary number')
+        raise ValueError('无效的二进制数')
 
     if '.' in bin_str:
         int_part, frac_part = bin_str.split('.', 1)
@@ -318,9 +318,9 @@ def binary_to_decimal(bin_str: str) -> float:
         int_part, frac_part = bin_str, ''
 
     if not int_part and not frac_part:
-        raise ValueError('Invalid binary number')
+        raise ValueError('无效的二进制数')
     if any(ch not in {'0', '1'} for ch in int_part + frac_part):
-        raise ValueError('Invalid binary number')
+        raise ValueError('无效的二进制数')
 
     result = 0.0
     for i, ch in enumerate(reversed(int_part)):
@@ -365,7 +365,7 @@ def valid_digits(base: int) -> set:
         return set('0123456789')
     if base == 16:
         return set('0123456789ABCDEF')
-    raise ValueError(f'Unsupported base: {base}')
+    raise ValueError(f'不支持的进制: {base}')
 
 
 def _tokenize_prog(expr: str, base: int) -> List[Tuple[str, str]]:
@@ -383,7 +383,7 @@ def _tokenize_prog(expr: str, base: int) -> List[Tuple[str, str]]:
                 current.clear()
             tokens.append(('op', ch))
         else:
-            raise ValueError(f"Invalid character '{ch}' for base {base}")
+            raise ValueError(f"字符 '{ch}' 不是有效的 {base} 进制数字")
 
     if current:
         tokens.append(('num', ''.join(current)))
@@ -422,7 +422,7 @@ def _eval_prog_rpn(rpn: List[Tuple[str, str]], base: int) -> int:
             stack.append(int(value, base))
         else:
             if len(stack) < 2:
-                raise ValueError('Incomplete expression')
+                raise ValueError('表达式不完整')
             b = stack.pop()
             a = stack.pop()
             stack.append(_apply_prog_op(a, b, value))
@@ -439,11 +439,11 @@ def _apply_prog_op(a: int, b: int, op: str) -> int:
         return a * b
     if op == '/':
         if b == 0:
-            raise ZeroDivisionError('Cannot divide by zero')
+            raise ZeroDivisionError('除数不能为零')
         return a // b
     if op == 'M':
         if b == 0:
-            raise ZeroDivisionError('Cannot modulo by zero')
+            raise ZeroDivisionError('取模除数不能为零')
         return a % b
     if op == '&':
         return a & b
@@ -455,7 +455,7 @@ def _apply_prog_op(a: int, b: int, op: str) -> int:
         return (a << b) & 0xFFFF_FFFF
     if op == '>':
         return (a & 0xFFFF_FFFF) >> b
-    raise ValueError(f'Unknown operator: {op}')
+    raise ValueError(f'未知运算符: {op}')
 
 
 def _format_prog(value: int, base: int) -> str:
