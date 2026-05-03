@@ -28,3 +28,6 @@ Thumbs.db
 
 # Reference files (not part of the project)
 成品.txt
+
+# Local changelog files
+changes/
